@@ -158,14 +158,14 @@ export async function POST(
 
                 expiresAt:
                   expiry,
+                  status:"ACTIVE",
+              },
 
                 // =========================
                 // DEFAULT STATUS
                 // =========================
 
-                status:
-                  "pending",
-              },
+                
 
               include: {
                 product: true,

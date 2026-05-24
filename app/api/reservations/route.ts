@@ -158,7 +158,7 @@ export async function POST(
 
                 expiresAt:
                   expiry,
-                  status:"ACTIVE",
+                  status:"pending",
               },
 
                 // =========================

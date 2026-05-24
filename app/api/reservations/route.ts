@@ -150,14 +150,21 @@ export async function POST(
           const newReservation =
             await tx.reservation.create({
 
-              data: {
+              
+                data: {
   quantity: Number(quantity),
   expiresAt: new Date(expiry),
   status: "PENDING",
 
   product: {
     connect: {
-      id:productId,
+      id: productId,
+    },
+  },
+
+  warehouse: {
+    connect: {
+      id: warehouseId,
     },
   },
 },

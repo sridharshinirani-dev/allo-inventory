@@ -151,15 +151,16 @@ export async function POST(
             await tx.reservation.create({
 
               data: {
+  quantity,
+  expiresAt: expiry,
+  status: "pending",
 
-                productId,
-
-                quantity,
-
-                expiresAt:
-                  expiry,
-                  status:"pending",
-              },
+  product: {
+    connect: {
+      id: productId,
+    },
+  },
+},
 
                 // =========================
                 // DEFAULT STATUS

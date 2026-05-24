@@ -1,195 +1,435 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Laptop",
-      category: "Electronics",
-      quantity: 10,
-      price: 55000,
-      status: "Available",
-    },
-    {
-      id: 2,
-      name: "Mouse",
-      category: "Accessories",
-      quantity: 20,
-      price: 500,
-      status: "Available",
-    },
-  ]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
 
-  const addProduct = () => {
-    if (!name || !category || !quantity || !price) {
-      alert("Please fill all fields");
-      return;
-    }
+  const [selectedProduct, setSelectedProduct] =
+    useState("");
 
-    const newProduct = {
-      id: products.length + 1,
-      name,
-      category,
-      quantity: Number(quantity),
-      price: Number(price),
-      status: "Available",
-    };
+  const [reserveQuantity, setReserveQuantity] =
+    useState("");
 
-    setProducts([...products, newProduct]);
+  const [expiryDate, setExpiryDate] =
+    useState("");
+
+  // FETCH PRODUCTS
+  const fetchProducts = async () => {
+    const res = await fetch("/api/products");
+
+    const data = await res.json();
+
+    setProducts(data);
+  };
+
+  // FETCH RESERVATIONS
+  const fetchReservations = async () => {
+    const res = await fetch(
+      "/api/reservations"
+    );
+
+    const data = await res.json();
+
+    setReservations(data);
+  };
+
+  // FETCH INVENTORY
+  const fetchInventory = async () => {
+    const res = await fetch("/api/inventory");
+
+    const data = await res.json();
+
+    setInventory(data);
+  };
+
+  // LOAD DATA
+  useEffect(() => {
+    fetchProducts();
+    fetchReservations();
+    fetchInventory();
+  }, []);
+
+  // ADD PRODUCT
+  const addProduct = async () => {
+    await fetch("/api/products", {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify({
+        name,
+        category,
+        quantity: Number(quantity),
+        price: Number(price),
+      }),
+    });
 
     setName("");
     setCategory("");
     setQuantity("");
     setPrice("");
+
+    fetchProducts();
   };
 
-  const deleteProduct = (id: number) => {
-    const updatedProducts = products.filter(
-      (product) => product.id !== id
-    );
+  // RESERVE PRODUCT
+  const reserveProduct = async () => {
+    await fetch("/api/reservations", {
+      method: "POST",
 
-    setProducts(updatedProducts);
-  };
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
 
-  const reserveProduct = (id: number) => {
-    const updatedProducts = products.map((product) => {
-      if (product.id === id) {
-        return {
-          ...product,
-          status: "Reserved",
-        };
-      }
+      body: JSON.stringify({
+        productId: Number(
+          selectedProduct
+        ),
 
-      return product;
+        quantity: Number(
+          reserveQuantity
+        ),
+
+        expiresAt: expiryDate,
+      }),
     });
 
-    setProducts(updatedProducts);
+    setSelectedProduct("");
+    setReserveQuantity("");
+    setExpiryDate("");
+
+    fetchProducts();
+    fetchReservations();
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-r from-blue-100 to-purple-100 p-8">
-      <h1 className="text-5xl font-bold text-center text-blue-700 mb-10">
+    <main className="p-10">
+      <h1 className="text-4xl font-bold text-center text-blue-600 mb-10">
         Inventory Management System
       </h1>
 
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-10">
-        <h2 className="text-3xl font-semibold mb-6 text-gray-700">
+      {/* ADD PRODUCT */}
+
+      <div className="border p-6 rounded-lg shadow mb-10">
+        <h2 className="text-2xl font-semibold mb-6">
           Add Product
         </h2>
 
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Product Name"
-            className="border p-3 rounded-xl"
+            className="border p-3 rounded"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
           />
 
           <input
             type="text"
             placeholder="Category"
-            className="border p-3 rounded-xl"
+            className="border p-3 rounded"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) =>
+              setCategory(e.target.value)
+            }
           />
 
           <input
             type="number"
             placeholder="Quantity"
-            className="border p-3 rounded-xl"
+            className="border p-3 rounded"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onChange={(e) =>
+              setQuantity(e.target.value)
+            }
           />
 
           <input
             type="number"
             placeholder="Price"
-            className="border p-3 rounded-xl"
+            className="border p-3 rounded"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) =>
+              setPrice(e.target.value)
+            }
           />
         </div>
 
         <button
           onClick={addProduct}
-          className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700"
+          className="bg-blue-600 text-white px-6 py-3 rounded mt-6"
         >
           Add Product
         </button>
       </div>
 
-      <div className="bg-white shadow-2xl rounded-2xl p-6 overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-              <th className="p-4">ID</th>
-              <th className="p-4">Product</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Quantity</th>
-              <th className="p-4">Price</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">Reserve</th>
-              <th className="p-4">Delete</th>
+      {/* PRODUCT TABLE */}
+
+      <table className="w-full border mb-10">
+        <thead className="bg-blue-600 text-white">
+          <tr>
+            <th>ID</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {products.map((product: any) => (
+            <tr key={product.id}>
+              <td>{product.id}</td>
+
+              <td>{product.name}</td>
+
+              <td>{product.category}</td>
+
+              <td>{product.quantity}</td>
+
+              <td>{product.price}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* RESERVATION */}
+
+      <div className="border p-6 rounded-lg shadow mb-10">
+        <h2 className="text-2xl font-semibold mb-6">
+          Create Reservation
+        </h2>
+
+        <div className="grid grid-cols-3 gap-4">
+          <select
+            className="border p-3 rounded"
+            value={selectedProduct}
+            onChange={(e) =>
+              setSelectedProduct(
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              Select Product
+            </option>
+
+            {products.map((product: any) => (
+              <option
+                key={product.id}
+                value={product.id}
+              >
+                {product.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Reservation Quantity"
+            className="border p-3 rounded"
+            value={reserveQuantity}
+            onChange={(e) =>
+              setReserveQuantity(
+                e.target.value
+              )
+            }
+          />
+
+          <input
+            type="date"
+            className="border p-3 rounded"
+            value={expiryDate}
+            onChange={(e) =>
+              setExpiryDate(
+                e.target.value
+              )
+            }
+          />
+        </div>
+
+        <button
+          onClick={reserveProduct}
+          className="bg-green-700 text-white px-6 py-3 rounded mt-6"
+        >
+          Reserve Product
+        </button>
+      </div>
+
+      {/* RESERVATION TABLE */}
+
+      <table className="w-full border mb-10">
+        <thead className="bg-green-700 text-white">
+          <tr>
+            <th>ID</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Status</th>
+            <th>Expiry</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {reservations.length > 0 ? (
+            reservations.map(
+              (reservation: any) => (
+                <tr
+                  key={reservation.id}
+                >
+                  <td>
+                    {reservation.id}
+                  </td>
+
+                  <td>
+                    {reservation.product
+                      ? reservation
+                          .product.name
+                      : "No Product"}
+                  </td>
+
+                  <td>
+                    {
+                      reservation.quantity
+                    }
+                  </td>
+
+                  <td>
+                    {reservation.status}
+                  </td>
+
+                  <td>
+                    {new Date(
+                      reservation.expiresAt
+                    ).toLocaleDateString()}
+                  </td>
+
+                  <td>
+                    {reservation.status ===
+                      "pending" && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            await fetch(
+                              `/api/reservations/${reservation.id}`,
+                              {
+                                method:
+                                  "PATCH",
+
+                                headers:
+                                  {
+                                    "Content-Type":
+                                      "application/json",
+                                  },
+
+                                body: JSON.stringify(
+                                  {
+                                    status:
+                                      "confirmed",
+                                  }
+                                ),
+                              }
+                            );
+
+                            fetchReservations();
+                          }}
+                          className="bg-blue-600 text-white px-3 py-1 rounded"
+                        >
+                          Confirm
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            await fetch(
+                              `/api/reservations/${reservation.id}`,
+                              {
+                                method:
+                                  "PATCH",
+
+                                headers:
+                                  {
+                                    "Content-Type":
+                                      "application/json",
+                                  },
+
+                                body: JSON.stringify(
+                                  {
+                                    status:
+                                      "released",
+                                  }
+                                ),
+                              }
+                            );
+
+                            fetchProducts();
+
+                            fetchReservations();
+                          }}
+                          className="bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Release
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            )
+          ) : (
+            <tr>
+              <td colSpan={6}>
+                No Reservations Found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* INVENTORY TABLE */}
+
+      <div className="mt-10">
+        <h2 className="text-2xl font-bold mb-4">
+          Inventory Details
+        </h2>
+
+        <table className="w-full border">
+          <thead className="bg-purple-700 text-white">
+            <tr>
+              <th>ID</th>
+              <th>Product</th>
+              <th>Warehouse</th>
+              <th>Stock</th>
             </tr>
           </thead>
 
           <tbody>
-            {products.map((product) => (
-              <tr
-                key={product.id}
-                className="text-center border-b hover:bg-gray-100"
-              >
-                <td className="p-4">{product.id}</td>
+            {inventory.map((item: any) => (
+              <tr key={item.id}>
+                <td>{item.id}</td>
 
-                <td className="p-4 font-semibold">
-                  {product.name}
+                <td>
+                  {item.product?.name}
                 </td>
 
-                <td className="p-4">{product.category}</td>
-
-                <td className="p-4">{product.quantity}</td>
-
-                <td className="p-4 text-green-600 font-bold">
-                  ₹{product.price}
+                <td>
+                  {item.warehouse?.name}
                 </td>
 
-                <td className="p-4">
-                  <span
-                    className={`px-4 py-2 rounded-full text-white ${
-                      product.status === "Available"
-                        ? "bg-green-500"
-                        : "bg-yellow-500"
-                    }`}
-                  >
-                    {product.status}
-                  </span>
-                </td>
-
-                <td className="p-4">
-                  <button
-                    onClick={() => reserveProduct(product.id)}
-                    className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600"
-                  >
-                    Reserve
-                  </button>
-                </td>
-
-                <td className="p-4">
-                  <button
-                    onClick={() => deleteProduct(product.id)}
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </td>
+                <td>{item.stock}</td>
               </tr>
             ))}
           </tbody>

@@ -1,54 +1,226 @@
 import { NextResponse } from "next/server";
+
 import prisma from "@/lib/prisma";
 
-export async function GET() {
-  const reservations = await prisma.reservation.findMany({
-    include: {
-      product: true,
-    },
-  });
+// =========================
+// GET RESERVATIONS
+// =========================
 
-  return NextResponse.json(reservations);
+export async function GET() {
+
+  const reservations =
+    await prisma.reservation.findMany({
+
+      include: {
+        product: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+  return NextResponse.json(
+    reservations
+  );
 }
 
-export async function POST(req: Request) {
-  const body = await req.json();
+// =========================
+// CREATE RESERVATION
+// =========================
 
-  const product = await prisma.product.findUnique({
-    where: {
-      id: body.productId,
-    },
-  });
+export async function POST(
+  request: Request
+) {
 
-  if (!product) {
-    return NextResponse.json({
-      error: "Product not found",
-    });
+  try {
+
+    const body =
+      await request.json();
+
+    const {
+      productId,
+      quantity,
+      expiresAt,
+    } = body;
+
+    // =========================
+    // EXPIRY VALIDATION
+    // =========================
+
+    const currentDate =
+      new Date();
+
+    const expiry =
+      new Date(expiresAt);
+
+    if (
+      expiry <
+      currentDate
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Reservation expired",
+        },
+        {
+          status: 410,
+        }
+      );
+    }
+
+    // =========================
+    // SERIALIZABLE TRANSACTION
+    // =========================
+
+    const reservation =
+      await prisma.$transaction(
+
+        async (tx) => {
+
+          // =========================
+          // FIND PRODUCT
+          // =========================
+
+          const product =
+            await tx.product.findUnique({
+
+              where: {
+                id: productId,
+              },
+            });
+
+          // =========================
+          // PRODUCT NOT FOUND
+          // =========================
+
+          if (!product) {
+
+            throw new Error(
+              "Product not found"
+            );
+          }
+
+          // =========================
+          // AVAILABLE STOCK
+          // =========================
+
+          const availableStock =
+            product.quantity -
+            product.reserved;
+
+          // =========================
+          // 409 CONFLICT
+          // =========================
+
+          if (
+            quantity >
+            availableStock
+          ) {
+
+            throw new Error(
+              "409"
+            );
+          }
+
+          // =========================
+          // UPDATE RESERVED STOCK
+          // =========================
+
+          await tx.product.update({
+
+            where: {
+              id: productId,
+            },
+
+            data: {
+
+              reserved: {
+                increment:
+                  quantity,
+              },
+            },
+          });
+
+          // =========================
+          // CREATE RESERVATION
+          // =========================
+
+          const newReservation =
+            await tx.reservation.create({
+
+              data: {
+
+                productId,
+
+                quantity,
+
+                expiresAt:
+                  expiry,
+
+                // =========================
+                // DEFAULT STATUS
+                // =========================
+
+                status:
+                  "pending",
+              },
+
+              include: {
+                product: true,
+              },
+            });
+
+          return newReservation;
+        },
+
+        {
+          isolationLevel:
+            "Serializable",
+        }
+      );
+
+    return NextResponse.json(
+      reservation
+    );
+
+  } catch (error: any) {
+
+    // =========================
+    // 409 ERROR HANDLING
+    // =========================
+
+    if (
+      error.message ===
+      "409"
+    ) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Not enough stock available",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // =========================
+    // GENERAL ERROR
+    // =========================
+
+    console.log(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Something went wrong",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-
-  if (product.quantity < body.quantity) {
-    return NextResponse.json({
-      error: "Not enough stock",
-    });
-  }
-
-  await prisma.product.update({
-    where: {
-      id: body.productId,
-    },
-    data: {
-      quantity: product.quantity - body.quantity,
-      reserved: product.reserved + body.quantity,
-    },
-  });
-
-  const reservation = await prisma.reservation.create({
-    data: {
-      productId: body.productId,
-      quantity: body.quantity,
-      expiresAt: new Date(body.expiresAt),
-    },
-  });
-
-  return NextResponse.json(reservation);
 }

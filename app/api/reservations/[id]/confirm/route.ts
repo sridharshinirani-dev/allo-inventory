@@ -3,26 +3,17 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 export async function PUT(
-
   request: Request,
-
-  context: any
-
+  { params }: any
 ) {
 
   try {
-
-    const params =
-      await context.params;
-
-    const id =
-      Number(params.id);
 
     const reservation =
       await prisma.reservation.update({
 
         where: {
-          id: id,
+          id: Number(params.id),
         },
 
         data: {
@@ -40,16 +31,12 @@ export async function PUT(
     console.log(error);
 
     return NextResponse.json(
-
       {
-        error:
-          "Failed to confirm reservation",
+        error: "Failed",
       },
-
       {
         status: 500,
       }
-
     );
   }
 }
